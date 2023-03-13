@@ -93,6 +93,7 @@ public interface NamingService {
      * @param groupName   group of service
      * @param instance    instance to register
      * @throws NacosException nacos exception
+     * 服务注册
      */
     void registerInstance(String serviceName, String groupName, Instance instance) throws NacosException;
     

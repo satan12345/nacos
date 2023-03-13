@@ -120,12 +120,15 @@ public class NamingProxy implements Closeable {
         this.setServerPort(DEFAULT_SERVER_PORT);
         this.namespaceId = namespaceId;
         this.endpoint = endpoint;
+        //默认重试次数
         this.maxRetry = ConvertUtils.toInt(properties.getProperty(PropertyKeyConst.NAMING_REQUEST_DOMAIN_RETRY_COUNT,
                 String.valueOf(UtilAndComs.REQUEST_DOMAIN_RETRY_COUNT)));
         
         if (StringUtils.isNotEmpty(serverList)) {
+            //服务器地址分割 a,b,c
             this.serverList = Arrays.asList(serverList.split(","));
             if (this.serverList.size() == 1) {
+                //服务器只有一个地址 那么域名与服务器地址列表相同
                 this.nacosDomain = serverList;
             }
         }
@@ -224,7 +227,7 @@ public class NamingProxy implements Closeable {
     
     /**
      * register a instance to service with specified instance properties.
-     *
+     * 注册服务实例
      * @param serviceName name of service
      * @param groupName   group of service
      * @param instance    instance to register
@@ -246,8 +249,9 @@ public class NamingProxy implements Closeable {
         params.put("enable", String.valueOf(instance.isEnabled()));
         params.put("healthy", String.valueOf(instance.isHealthy()));
         params.put("ephemeral", String.valueOf(instance.isEphemeral()));
+        //元数据 序列化为json
         params.put("metadata", JacksonUtils.toJson(instance.getMetadata()));
-        
+        //服务注册 /nacos/v1/ns/instance
         reqApi(UtilAndComs.nacosUrlInstance, params, HttpMethod.POST);
         
     }
@@ -408,7 +412,7 @@ public class NamingProxy implements Closeable {
         params.put("udpPort", String.valueOf(udpPort));
         params.put("clientIP", NetUtils.localIP());
         params.put("healthyOnly", String.valueOf(healthyOnly));
-        
+        // /nacos/v1/ns/instance/list
         return reqApi(UtilAndComs.nacosUrlBase + "/instance/list", params, HttpMethod.GET);
     }
     
@@ -518,7 +522,7 @@ public class NamingProxy implements Closeable {
             String method) throws NacosException {
         
         params.put(CommonParams.NAMESPACE_ID, getNamespaceId());
-        
+        //服务器地址判断
         if (CollectionUtils.isEmpty(servers) && StringUtils.isBlank(nacosDomain)) {
             throw new NacosException(NacosException.INVALID_PARAM, "no server available");
         }
@@ -526,6 +530,7 @@ public class NamingProxy implements Closeable {
         NacosException exception = new NacosException();
         
         if (StringUtils.isNotBlank(nacosDomain)) {
+            //nacos只有一个地址的时候 域名即地址
             for (int i = 0; i < maxRetry; i++) {
                 try {
                     return callServer(api, params, body, nacosDomain, method);
@@ -537,12 +542,14 @@ public class NamingProxy implements Closeable {
                 }
             }
         } else {
+            //如果有多个服务器地址 则随机一台服务器进行连接
             Random random = new Random(System.currentTimeMillis());
             int index = random.nextInt(servers.size());
             
             for (int i = 0; i < servers.size(); i++) {
                 String server = servers.get(index);
                 try {
+                    //  api=/nacos/v1/ns/instance
                     return callServer(api, params, body, server, method);
                 } catch (NacosException e) {
                     exception = e;
@@ -577,7 +584,7 @@ public class NamingProxy implements Closeable {
     
     /**
      * Call server.
-     *
+     * 服务器调用
      * @param api       api
      * @param params    parameters
      * @param body      body

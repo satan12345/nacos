@@ -40,15 +40,36 @@ public class KeyBuilder {
     public static final String BRIEF_SERVICE_META_KEY_PREFIX = "meta.";
     
     public static final String BRIEF_INSTANCE_LIST_KEY_PREFIX = "iplist.";
-    
+
+    /**
+     * 根据服务名与命名空间 生成临时实例节点的key
+     * @param namespaceId
+     * @param serviceName
+     * @return
+     */
     private static String buildEphemeralInstanceListKey(String namespaceId, String serviceName) {
+        //com.alibaba.nacos.naming.iplist.ephemeral.namespaceId##serviceName
         return INSTANCE_LIST_KEY_PREFIX + EPHEMERAL_KEY_PREFIX + namespaceId + NAMESPACE_KEY_CONNECTOR + serviceName;
     }
-    
+
+    /**
+     * 根据服务名与命名空间 生成持久实例节点的key
+     * @param namespaceId
+     * @param serviceName
+     * @return
+     */
     private static String buildPersistentInstanceListKey(String namespaceId, String serviceName) {
+        //com.alibaba.nacos.naming.iplist.namespaceId##serviceName
         return INSTANCE_LIST_KEY_PREFIX + namespaceId + NAMESPACE_KEY_CONNECTOR + serviceName;
     }
-    
+
+    /**
+     * 根据服务生成key
+     * @param namespaceId
+     * @param serviceName
+     * @param ephemeral
+     * @return
+     */
     public static String buildInstanceListKey(String namespaceId, String serviceName, boolean ephemeral) {
         return ephemeral ? buildEphemeralInstanceListKey(namespaceId, serviceName)
                 : buildPersistentInstanceListKey(namespaceId, serviceName);
@@ -61,7 +82,13 @@ public class KeyBuilder {
     public static String getSwitchDomainKey() {
         return SERVICE_META_KEY_PREFIX + UtilsAndCommons.SWITCH_DOMAIN_NAME;
     }
-    
+
+    /**
+     * 判断是否是临时节点
+     * 判断key 是否是以com.alibaba.nacos.naming.iplist.ephemeral. 开头的
+     * @param key
+     * @return
+     */
     public static boolean matchEphemeralInstanceListKey(String key) {
         return key.startsWith(INSTANCE_LIST_KEY_PREFIX + EPHEMERAL_KEY_PREFIX);
     }

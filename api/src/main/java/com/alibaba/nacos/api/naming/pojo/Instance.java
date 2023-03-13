@@ -218,7 +218,11 @@ public class Instance implements Serializable {
         return getMetaDataByKeyWithDefault(PreservedMetadataKeys.HEART_BEAT_INTERVAL,
                 Constants.DEFAULT_HEART_BEAT_INTERVAL);
     }
-    
+
+    /**
+     * 获取实例心跳超时时间
+     * @return
+     */
     public long getInstanceHeartBeatTimeOut() {
         return getMetaDataByKeyWithDefault(PreservedMetadataKeys.HEART_BEAT_TIMEOUT,
                 Constants.DEFAULT_HEART_BEAT_TIMEOUT);
@@ -248,9 +252,11 @@ public class Instance implements Serializable {
     }
     
     private long getMetaDataByKeyWithDefault(final String key, final long defaultValue) {
+        //没有元数据信息 直接返回默认值
         if (getMetadata() == null || getMetadata().isEmpty()) {
             return defaultValue;
         }
+        //存在元数据信息 获取元数据信息里是否配置超时时间
         final String value = getMetadata().get(key);
         if (!StringUtils.isEmpty(value) && value.matches(NUMBER_PATTERN)) {
             return Long.parseLong(value);

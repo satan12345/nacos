@@ -58,7 +58,7 @@ public class NacosNamingService implements NamingService {
     private String namespace;
     
     private String endpoint;
-    
+    //服务器地址
     private String serverList;
     
     private String cacheDir;
@@ -76,7 +76,12 @@ public class NacosNamingService implements NamingService {
         properties.setProperty(PropertyKeyConst.SERVER_ADDR, serverList);
         init(properties);
     }
-    
+
+    /**
+     * 通过配置构建实例化命名服务
+     * @param properties
+     * @throws NacosException
+     */
     public NacosNamingService(Properties properties) throws NacosException {
         init(properties);
     }
@@ -89,7 +94,9 @@ public class NacosNamingService implements NamingService {
         InitUtils.initWebRootContext(properties);
         initCacheDir(properties);
         initLogName(properties);
-        
+        /**
+         * 服务注册代理
+         */
         this.serverProxy = new NamingProxy(this.namespace, this.endpoint, this.serverList, properties);
         this.beatReactor = new BeatReactor(this.serverProxy, initClientBeatThreadCount(properties));
         this.hostReactor = new HostReactor(this.serverProxy, beatReactor, this.cacheDir, isLoadCacheAtStart(properties),
@@ -206,15 +213,26 @@ public class NacosNamingService implements NamingService {
     public void registerInstance(String serviceName, Instance instance) throws NacosException {
         registerInstance(serviceName, Constants.DEFAULT_GROUP, instance);
     }
-    
+
+    /**
+     * 服务注册
+     * @param serviceName name of service
+     * @param groupName   group of service
+     * @param instance    instance to register
+     * @throws NacosException
+     */
     @Override
     public void registerInstance(String serviceName, String groupName, Instance instance) throws NacosException {
+        //检查实例是否合法
         NamingUtils.checkInstanceIsLegal(instance);
+        //服务名与group名拼接  groupName&&ServiceName
         String groupedServiceName = NamingUtils.getGroupedName(serviceName, groupName);
         if (instance.isEphemeral()) {
+            //临时节点 构建心跳检测参数
             BeatInfo beatInfo = beatReactor.buildBeatInfo(groupedServiceName, instance);
             beatReactor.addBeatInfo(groupedServiceName, beatInfo);
         }
+        //服务注册
         serverProxy.registerService(groupedServiceName, groupName, instance);
     }
     
@@ -301,13 +319,16 @@ public class NacosNamingService implements NamingService {
             boolean subscribe) throws NacosException {
         
         ServiceInfo serviceInfo;
+        //拼接集群字符串
+        String clusterStr = StringUtils.join(clusters, ",");
+        //组装服务名与组名
+        String groupedName = NamingUtils.getGroupedName(serviceName, groupName);
         if (subscribe) {
-            serviceInfo = hostReactor.getServiceInfo(NamingUtils.getGroupedName(serviceName, groupName),
-                    StringUtils.join(clusters, ","));
+            serviceInfo = hostReactor.getServiceInfo(groupedName, clusterStr);
         } else {
             serviceInfo = hostReactor
-                    .getServiceInfoDirectlyFromServer(NamingUtils.getGroupedName(serviceName, groupName),
-                            StringUtils.join(clusters, ","));
+                    .getServiceInfoDirectlyFromServer(groupedName,
+                        clusterStr);
         }
         List<Instance> list;
         if (serviceInfo == null || CollectionUtils.isEmpty(list = serviceInfo.getHosts())) {

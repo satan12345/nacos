@@ -79,6 +79,7 @@ import static com.alibaba.nacos.naming.misc.UtilsAndCommons.UPDATE_INSTANCE_META
  * @author nkorange
  */
 @RestController
+// /v1/ns/instance 服务注册控制器类
 @RequestMapping(UtilsAndCommons.NACOS_NAMING_CONTEXT + "/instance")
 public class InstanceController {
     
@@ -123,8 +124,8 @@ public class InstanceController {
     };
     
     /**
+     * 服务注册
      * Register new instance.
-     *
      * @param request http request
      * @return 'ok' if success
      * @throws Exception any error during register
@@ -133,14 +134,16 @@ public class InstanceController {
     @PostMapping
     @Secured(parser = NamingResourceParser.class, action = ActionTypes.WRITE)
     public String register(HttpServletRequest request) throws Exception {
-        
+        //从request请求中提取命名空间
         final String namespaceId = WebUtils
                 .optional(request, CommonParams.NAMESPACE_ID, Constants.DEFAULT_NAMESPACE_ID);
+        //从请求参数中提取服务名 这里的服务名是groupName@@serviceName 组合
         final String serviceName = WebUtils.required(request, CommonParams.SERVICE_NAME);
+        //检查serviceName是否合法
         NamingUtils.checkServiceNameFormat(serviceName);
-        
+        //从request中提取参数分装为服务实例
         final Instance instance = parseInstance(request);
-        
+        //服务注册
         serviceManager.registerInstance(namespaceId, serviceName, instance);
         return "ok";
     }
@@ -579,7 +582,7 @@ public class InstanceController {
     }
     
     private Instance parseInstance(HttpServletRequest request) throws Exception {
-        
+        //服务名称
         String serviceName = WebUtils.required(request, CommonParams.SERVICE_NAME);
         String app = WebUtils.optional(request, "app", "DEFAULT");
         Instance instance = getIpAddress(request);
@@ -587,13 +590,17 @@ public class InstanceController {
         instance.setServiceName(serviceName);
         // Generate simple instance id first. This value would be updated according to
         // INSTANCE_ID_GENERATOR.
+        //为实例设置一个实例id
         instance.setInstanceId(instance.generateInstanceId());
+        //首次注册的时候 上次心跳检测时间为当前注册事件
         instance.setLastBeat(System.currentTimeMillis());
+        //获取元数据
         String metadata = WebUtils.optional(request, "metadata", StringUtils.EMPTY);
         if (StringUtils.isNotEmpty(metadata)) {
+            //解析元数据为Map JSON字符串转Map
             instance.setMetadata(UtilsAndCommons.parseMetadata(metadata));
         }
-        
+        //实例校验一下
         instance.validate();
         
         return instance;

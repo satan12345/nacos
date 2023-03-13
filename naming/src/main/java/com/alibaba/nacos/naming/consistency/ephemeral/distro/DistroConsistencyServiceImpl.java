@@ -66,6 +66,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * @author nkorange
  * @since 1.0.0
  */
+
+/**
+ * 临时实例一致性处理的Service
+ * AP架构 一致性处理
+ */
 @DependsOn("ProtocolManager")
 @org.springframework.stereotype.Service("distroConsistencyService")
 public class DistroConsistencyServiceImpl implements EphemeralConsistencyService, DistroDataProcessor {
@@ -73,7 +78,9 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
     private static final String ON_RECEIVE_CHECKSUMS_PROCESSING_TAG = "1";
     
     private final DistroMapper distroMapper;
-    
+    /**
+     * 临时节点的数据 数据存储
+     */
     private final DataStore dataStore;
     
     private final Serializer serializer;
@@ -81,7 +88,9 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
     private final SwitchDomain switchDomain;
     
     private final GlobalConfig globalConfig;
-    
+    /**
+     * 分布式数据一致性的一种协议
+     */
     private final DistroProtocol distroProtocol;
     
     private volatile Notifier notifier = new Notifier();
@@ -102,12 +111,20 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
     
     @PostConstruct
     public void init() {
+        //线程池执行任务
         GlobalExecutor.submitDistroNotifyTask(notifier);
     }
-    
+
+    /**
+     * 保存
+     * @param key   key of data, this key should be globally unique
+     * @param value value of data
+     * @throws NacosException
+     */
     @Override
     public void put(String key, Record value) throws NacosException {
-        onPut(key, value);
+        onPut(key, value);//本机内存中保存一份数据
+        //数据同步
         distroProtocol.sync(new DistroKey(key, KeyBuilder.INSTANCE_LIST_KEY_PREFIX), DataOperation.CHANGE,
                 globalConfig.getTaskDispatchPeriod() / 2);
     }
@@ -117,7 +134,13 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
         onRemove(key);
         listeners.remove(key);
     }
-    
+
+    /**
+     * 根据key 获取数据
+     * @param key key of data
+     * @return
+     * @throws NacosException
+     */
     @Override
     public Datum get(String key) throws NacosException {
         return dataStore.get(key);
@@ -132,17 +155,23 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
     public void onPut(String key, Record value) {
         
         if (KeyBuilder.matchEphemeralInstanceListKey(key)) {
+            //如果是临时节点
+            //封装对象
             Datum<Instances> datum = new Datum<>();
             datum.value = (Instances) value;
             datum.key = key;
             datum.timestamp.incrementAndGet();
             dataStore.put(key, datum);
         }
-        
+
+        /**
+         * 如果已经包含了这个服务的key 则返回true 取反为false  不返回 执行下面的触发数据变化的通知
+         * 如果没有包含 则返回false 取反为true 进入if 直接返回 不执行下面的任务
+         */
         if (!listeners.containsKey(key)) {
             return;
         }
-        
+        //添加任务
         notifier.addTask(key, DataOperation.CHANGE);
     }
     
@@ -319,7 +348,13 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
             return false;
         }
     }
-    
+
+    /**
+     * 保存关系
+     * @param key      key of data
+     * @param listener callback of data change
+     * @throws NacosException
+     */
     @Override
     public void listen(String key, RecordListener listener) throws NacosException {
         ConcurrentLinkedQueue<RecordListener> recordListeners = listeners.get(key);
@@ -375,57 +410,75 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
     public boolean isInitialized() {
         return distroProtocol.isInitialized() || !globalConfig.isDataWarmup();
     }
-    
+
+    /**
+     * 通知的组件
+     */
     public class Notifier implements Runnable {
-        
+
+        /**
+         * 这个map 用于记录当前在队列中的key
+         * 会在入队的时候放入map
+         * 出队的时候从map中移除
+         */
         private ConcurrentHashMap<String, String> services = new ConcurrentHashMap<>(10 * 1024);
-        
+
         private BlockingQueue<Pair<String, DataOperation>> tasks = new ArrayBlockingQueue<>(1024 * 1024);
         
         /**
          * Add new notify task to queue.
-         *
+         * 添加任务
          * @param datumKey data key
          * @param action   action for data
          */
         public void addTask(String datumKey, DataOperation action) {
-            
+
+            //做去重判断
             if (services.containsKey(datumKey) && action == DataOperation.CHANGE) {
                 return;
             }
             if (action == DataOperation.CHANGE) {
                 services.put(datumKey, StringUtils.EMPTY);
             }
-            tasks.offer(Pair.with(datumKey, action));
+            //参数封装对象 然后入队
+            Pair<String, DataOperation> with = Pair.with(datumKey, action);
+            tasks.offer(with);
         }
         
         public int getTaskSize() {
             return tasks.size();
         }
-        
+        //执行人
         @Override
         public void run() {
             Loggers.DISTRO.info("distro notifier started");
             
             for (; ; ) {
                 try {
+                    //从队列中获取数据
                     Pair<String, DataOperation> pair = tasks.take();
+                    //处理数据
                     handle(pair);
                 } catch (Throwable e) {
                     Loggers.DISTRO.error("[NACOS-DISTRO] Error while handling notifying task", e);
                 }
             }
         }
-        
+
+        /**
+         * 任务处理
+         * @param pair
+         */
         private void handle(Pair<String, DataOperation> pair) {
             try {
+
                 String datumKey = pair.getValue0();
                 DataOperation action = pair.getValue1();
-                
+                //出队后从service中移除key
                 services.remove(datumKey);
                 
                 int count = 0;
-
+                // 这里根据key获取对应的Service 通过key -->Service 找到对应的
                 ConcurrentLinkedQueue<RecordListener> recordListeners = listeners.get(datumKey);
                 if (recordListeners == null) {
                     Loggers.DISTRO.info("[DISTRO-WARN] RecordListener not found, key: {}", datumKey);

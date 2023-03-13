@@ -39,7 +39,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class Instances implements Record {
     
     private static final long serialVersionUID = 5500823673993740145L;
-    
+    //实例集合
     private List<Instance> instanceList = new CopyOnWriteArrayList<>();
     
     public List<Instance> getInstanceList() {

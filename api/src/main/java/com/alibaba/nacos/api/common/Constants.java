@@ -165,9 +165,13 @@ public class Constants {
     public static final String NAMING_HTTP_HEADER_SPLITTER = "\\|";
     
     public static final String DEFAULT_CLUSTER_NAME = "DEFAULT";
-    
+    /**
+     * 默认的心跳超时时间
+     */
     public static final long DEFAULT_HEART_BEAT_TIMEOUT = TimeUnit.SECONDS.toMillis(15);
-    
+    /**
+     * 删除服务的默认超时时间
+     */
     public static final long DEFAULT_IP_DELETE_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
     
     public static final long DEFAULT_HEART_BEAT_INTERVAL = TimeUnit.SECONDS.toMillis(5);

@@ -68,11 +68,18 @@ public class ClientBeatCheckTask implements Runnable {
     public SwitchDomain getSwitchDomain() {
         return ApplicationUtils.getBean(SwitchDomain.class);
     }
-    
+
+    /**
+     * 根据指定的服务构建任务key
+     * @return
+     */
     public String taskKey() {
         return KeyBuilder.buildServiceMetaKey(service.getNamespaceId(), service.getName());
     }
-    
+
+    /**
+     * 线程任务
+     */
     @Override
     public void run() {
         try {
@@ -83,28 +90,36 @@ public class ClientBeatCheckTask implements Runnable {
             if (!getSwitchDomain().isHealthCheckEnabled()) {
                 return;
             }
-            
+            //获取服务的所有临时实例
             List<Instance> instances = service.allIPs(true);
             
             // first set health status of instances:
             for (Instance instance : instances) {
+                /**
+                 * 遍历所有实例 判断系统当前时间与实例最后一次心跳时间对比 判断是否大于心跳超时时间  默认 15S
+                 */
                 if (System.currentTimeMillis() - instance.getLastBeat() > instance.getInstanceHeartBeatTimeOut()) {
                     if (!instance.isMarked()) {
                         if (instance.isHealthy()) {
+                            //修改实例的健康状态
                             instance.setHealthy(false);
                             Loggers.EVT_LOG
                                     .info("{POS} {IP-DISABLED} valid: {}:{}@{}@{}, region: {}, msg: client timeout after {}, last beat: {}",
                                             instance.getIp(), instance.getPort(), instance.getClusterName(),
                                             service.getName(), UtilsAndCommons.LOCALHOST_SITE,
                                             instance.getInstanceHeartBeatTimeOut(), instance.getLastBeat());
+                            //服务状态发生变化
                             getPushService().serviceChanged(service);
+                            //发布事件-- 实例心跳检测超时
                             ApplicationUtils.publishEvent(new InstanceHeartbeatTimeoutEvent(this, instance));
                         }
                     }
+
                 }
             }
-            
+            //是否启用实例自动过期删除 这里默认为true 取反则为false 代码不会返回 而是执行下面的删除服务的判断逻辑
             if (!getGlobalConfig().isExpireInstance()) {
+
                 return;
             }
             
@@ -114,11 +129,12 @@ public class ClientBeatCheckTask implements Runnable {
                 if (instance.isMarked()) {
                     continue;
                 }
-                
+                //遍历所有服务 判断当前时间与实例的最后一次心跳检测的时间差是否大于 删除时间的阈值 默认30S
                 if (System.currentTimeMillis() - instance.getLastBeat() > instance.getIpDeleteTimeout()) {
                     // delete instance
                     Loggers.SRV_LOG.info("[AUTO-DELETE-IP] service: {}, ip: {}", service.getName(),
                             JacksonUtils.toJson(instance));
+                    //删除实例
                     deleteIp(instance);
                 }
             }
@@ -128,7 +144,7 @@ public class ClientBeatCheckTask implements Runnable {
         }
         
     }
-    
+    //删除指定的实例
     private void deleteIp(Instance instance) {
         
         try {
@@ -139,8 +155,9 @@ public class ClientBeatCheckTask implements Runnable {
             
             String url = "http://" + IPUtil.localHostIP() + IPUtil.IP_PORT_SPLITER + EnvUtil.getPort() + EnvUtil.getContextPath()
                     + UtilsAndCommons.NACOS_NAMING_CONTEXT + "/instance?" + request.toUrl();
-            
+            //http://127.0.0.1:8848/nacos/v1/ns/instance?ip=xxx&port=xxx
             // delete instance asynchronously:
+            //异步删除服务实例
             HttpClient.asyncHttpDelete(url, null, null, new Callback<String>() {
                 @Override
                 public void onReceive(RestResult<String> result) {

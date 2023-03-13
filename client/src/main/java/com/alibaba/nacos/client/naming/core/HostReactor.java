@@ -64,7 +64,9 @@ public class HostReactor implements Closeable {
     private static final long UPDATE_HOLD_INTERVAL = 5000L;
     
     private final Map<String, ScheduledFuture<?>> futureMap = new ConcurrentHashMap<String, ScheduledFuture<?>>();
-    
+    /**
+     * 用于缓存服务信息的Map
+     */
     private final Map<String, ServiceInfo> serviceInfoMap;
     
     private final Map<String, Object> updatingMap;
@@ -166,7 +168,7 @@ public class HostReactor implements Closeable {
     
     /**
      * Process service json.
-     *
+     * 处理服务器的 JSON数据
      * @param json service json
      * @return service info
      */
@@ -296,9 +298,9 @@ public class HostReactor implements Closeable {
     }
     
     private ServiceInfo getServiceInfo0(String serviceName, String clusters) {
-        
+        //拼装key
         String key = ServiceInfo.getKey(serviceName, clusters);
-        
+        //从本地缓存中获取
         return serviceInfoMap.get(key);
     }
     
@@ -318,15 +320,17 @@ public class HostReactor implements Closeable {
         if (failoverReactor.isFailoverSwitch()) {
             return failoverReactor.getService(key);
         }
-        
+        //获取服务的信息
         ServiceInfo serviceObj = getServiceInfo0(serviceName, clusters);
         
         if (null == serviceObj) {
+            //填充服务占位信息
             serviceObj = new ServiceInfo(serviceName, clusters);
             
             serviceInfoMap.put(serviceObj.getKey(), serviceObj);
             
             updatingMap.put(serviceName, new Object());
+            //更新服务列表
             updateServiceNow(serviceName, clusters);
             updatingMap.remove(serviceName);
             
@@ -344,7 +348,7 @@ public class HostReactor implements Closeable {
                 }
             }
         }
-        
+        //定时更新
         scheduleUpdateIfAbsent(serviceName, clusters);
         
         return serviceInfoMap.get(serviceObj.getKey());
@@ -373,7 +377,7 @@ public class HostReactor implements Closeable {
             if (futureMap.get(ServiceInfo.getKey(serviceName, clusters)) != null) {
                 return;
             }
-            
+            //添加任务
             ScheduledFuture<?> future = addTask(new UpdateTask(serviceName, clusters));
             futureMap.put(ServiceInfo.getKey(serviceName, clusters), future);
         }
@@ -390,7 +394,7 @@ public class HostReactor implements Closeable {
         try {
             
             String result = serverProxy.queryList(serviceName, clusters, pushReceiver.getUdpPort(), false);
-            
+            //接收到服务器数据 进行处理
             if (StringUtils.isNotEmpty(result)) {
                 processServiceJson(result);
             }
@@ -495,6 +499,7 @@ public class HostReactor implements Closeable {
                     incFailCount();
                     return;
                 }
+                //获取延迟时间
                 delayTime = serviceObj.getCacheMillis();
                 resetFailCount();
             } catch (Throwable e) {

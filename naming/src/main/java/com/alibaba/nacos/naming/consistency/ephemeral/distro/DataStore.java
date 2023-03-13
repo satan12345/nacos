@@ -28,13 +28,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Store of data.
- *
+ *存储数据的类
  * @author nkorange
  * @since 1.0.0
  */
 @Component
 public class DataStore {
-    
+    //存储数据
     private Map<String, Datum> dataMap = new ConcurrentHashMap<>(1024);
     
     public void put(String key, Datum value) {
@@ -48,7 +48,12 @@ public class DataStore {
     public Set<String> keys() {
         return dataMap.keySet();
     }
-    
+
+    /**
+     * 获取数据
+     * @param key
+     * @return
+     */
     public Datum get(String key) {
         return dataMap.get(key);
     }

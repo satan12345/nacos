@@ -47,17 +47,32 @@ public class DelegateConsistencyServiceImpl implements ConsistencyService {
     
     @Override
     public void put(String key, Record value) throws NacosException {
-        mapConsistencyService(key).put(key, value);
+        //根据key 获取一致性处理的Service
+        /**
+         * ephemeralConsistencyService 临时的
+         * persistentConsistencyService 持久的
+         */
+        ConsistencyService consistencyService = mapConsistencyService(key);
+        consistencyService.put(key, value);
     }
     
     @Override
     public void remove(String key) throws NacosException {
         mapConsistencyService(key).remove(key);
     }
-    
+
+    /**
+     * 获取
+     * @param key key of data
+     * @return
+     * @throws NacosException
+     */
     @Override
     public Datum get(String key) throws NacosException {
-        return mapConsistencyService(key).get(key);
+        //ephemeralConsistencyService 临时实例 DistroConsistencyServiceImpl
+        //persistentConsistencyService 持久实例 PersistentConsistencyServiceDelegateImpl
+        ConsistencyService consistencyService = mapConsistencyService(key);
+        return consistencyService.get(key);
     }
     
     @Override
@@ -103,6 +118,7 @@ public class DelegateConsistencyServiceImpl implements ConsistencyService {
     }
     
     private ConsistencyService mapConsistencyService(String key) {
+        //判断操作的是临时实例 还是持久实例 AP一致性处理  还是CP一致性处理
         return KeyBuilder.matchEphemeralKey(key) ? ephemeralConsistencyService : persistentConsistencyService;
     }
 }

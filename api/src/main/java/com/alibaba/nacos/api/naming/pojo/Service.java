@@ -36,6 +36,7 @@ public class Service implements Serializable {
     
     /**
      * service name.
+     * 服务名
      */
     private String name;
     

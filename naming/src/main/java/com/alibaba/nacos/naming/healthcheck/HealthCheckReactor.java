@@ -31,10 +31,10 @@ import java.util.concurrent.TimeUnit;
  */
 @SuppressWarnings("PMD.ThreadPoolCreationRule")
 public class HealthCheckReactor {
-    
+    //存放定时任务的map
     private static Map<String, ScheduledFuture> futureMap = new ConcurrentHashMap<>();
     
-    /**
+    /**集群的心跳检查
      * Schedule health check task.
      *
      * @param task health check task
@@ -45,13 +45,17 @@ public class HealthCheckReactor {
         return GlobalExecutor.scheduleNamingHealth(task, task.getCheckRtNormalized(), TimeUnit.MILLISECONDS);
     }
     
-    /**
+    /**客户端心跳检查
      * Schedule client beat check task with a delay.
      *
      * @param task client beat check task
      */
     public static void scheduleCheck(ClientBeatCheckTask task) {
-        futureMap.computeIfAbsent(task.taskKey(),
+        //根据服务构建任务key
+        String key = task.taskKey();
+        futureMap.computeIfAbsent(key,
+                //key 不存在则添加
+            //     创建定时健康检查任务
                 k -> GlobalExecutor.scheduleNamingHealth(task, 5000, 5000, TimeUnit.MILLISECONDS));
     }
     

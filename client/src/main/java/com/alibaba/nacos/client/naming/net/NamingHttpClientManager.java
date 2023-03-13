@@ -35,12 +35,12 @@ import static com.alibaba.nacos.client.utils.LogUtils.NAMING_LOGGER;
  * @author mai.jh
  */
 public class NamingHttpClientManager implements Closeable {
-    
+    //从系统参数中获取 读取超时时间
     private static final int READ_TIME_OUT_MILLIS = Integer
             .getInteger("com.alibaba.nacos.client.naming.rtimeout", 50000);
-    
+    //从系统参数中获取 连接超时时间
     private static final int CON_TIME_OUT_MILLIS = Integer.getInteger("com.alibaba.nacos.client.naming.ctimeout", 3000);
-    
+    //从系统参数中获取判断是否启用https
     private static final boolean ENABLE_HTTPS = Boolean.getBoolean(TlsSystemConfig.TLS_ENABLE);
     
     private static final int MAX_REDIRECTS = 5;

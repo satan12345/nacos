@@ -49,6 +49,7 @@ public class NamingUtils {
         if (StringUtils.isBlank(groupName)) {
             throw new IllegalArgumentException("Param 'groupName' is illegal, groupName is blank");
         }
+        //组名@@服务名 作为新的服务名
         final String resultGroupedName = groupName + Constants.SERVICE_INFO_SPLITER + serviceName;
         return resultGroupedName.intern();
     }

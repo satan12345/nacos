@@ -106,7 +106,7 @@ public class UtilsAndCommons {
     public static final String API_DOM = "/api/dom";
     
     public static final String NAMESPACE_SERVICE_CONNECTOR = "##";
-    
+    //实例添加类型
     public static final String UPDATE_INSTANCE_ACTION_ADD = "add";
     
     public static final String UPDATE_INSTANCE_ACTION_REMOVE = "remove";

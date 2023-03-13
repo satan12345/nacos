@@ -54,7 +54,9 @@ public class Instance extends com.alibaba.nacos.api.naming.pojo.Instance impleme
     
     @JsonIgnore
     private volatile boolean mockValid = false;
-    
+    /**
+     * 是否被标记
+     */
     private volatile boolean marked = false;
     
     private String tenant;
@@ -174,7 +176,11 @@ public class Instance extends com.alibaba.nacos.api.naming.pojo.Instance impleme
         
         return instance;
     }
-    
+
+    /**
+     * 192.168.35.203:8086
+     * @return
+     */
     public String toIpAddr() {
         return getIp() + ":" + getPort();
     }
@@ -246,10 +252,15 @@ public class Instance extends com.alibaba.nacos.api.naming.pojo.Instance impleme
         return getIp().equals(other.getIp()) && (getPort() == other.getPort() || getPort() == 0)
                 && this.isEphemeral() == other.isEphemeral();
     }
-    
+
+    /**
+     * 获取实例的属性拼接的字符串
+     * @return
+     */
     @JsonIgnore
     public String getDatumKey() {
         if (getPort() > 0) {
+            //192.168.35.203:8086:unknown:DEFAULT
             return getIp() + ":" + getPort() + ":" + UtilsAndCommons.LOCALHOST_SITE + ":" + getClusterName();
         } else {
             return getIp() + ":" + UtilsAndCommons.LOCALHOST_SITE + ":" + getClusterName();
@@ -358,12 +369,13 @@ public class Instance extends com.alibaba.nacos.api.naming.pojo.Instance impleme
      */
     public void validate() throws NacosException {
         if (onlyContainsDigitAndDot()) {
+            //Ip
             if (!IPUtil.containsPort(getIp() + IPUtil.IP_PORT_SPLITER + getPort())) {
                 throw new NacosException(NacosException.INVALID_PARAM,
                         "instance format invalid: Your IP address is spelled incorrectly");
             }
         }
-        
+        //权重值判断
         if (getWeight() > MAX_WEIGHT_VALUE || getWeight() < MIN_WEIGHT_VALUE) {
             throw new NacosException(NacosException.INVALID_PARAM,
                     "instance format invalid: The weights range from " + MIN_WEIGHT_VALUE + " to " + MAX_WEIGHT_VALUE);

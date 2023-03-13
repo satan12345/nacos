@@ -37,7 +37,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Distro protocol.
- *
+ * 实现分布式数据一致性的一种协议
  * @author xiweng.yy
  */
 @Component

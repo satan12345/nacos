@@ -367,7 +367,7 @@ public class PushService implements ApplicationContextAware, ApplicationListener
     
     /**
      * Service changed.
-     *
+     * 服务发生变化
      * @param service service
      */
     public void serviceChanged(Service service) {
@@ -376,7 +376,7 @@ public class PushService implements ApplicationContextAware, ApplicationListener
                 .containsKey(UtilsAndCommons.assembleFullServiceName(service.getNamespaceId(), service.getName()))) {
             return;
         }
-        
+        //发布事件 服务状态发生变化
         this.applicationContext.publishEvent(new ServiceChangeEvent(this, service));
     }
     

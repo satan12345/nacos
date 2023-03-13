@@ -98,7 +98,9 @@ public class GlobalExecutor {
     private static final ScheduledExecutorService TCP_CHECK_EXECUTOR = ExecutorFactory.Managed
             .newSingleScheduledExecutorService(ClassUtils.getCanonicalName(NamingApp.class),
                     new NameThreadFactory("com.alibaba.nacos.naming.tcp.check.worker"));
-    
+    /**
+     * 命名服务健康检查的定时线程池
+     */
     private static final ScheduledExecutorService NAMING_HEALTH_EXECUTOR = ExecutorFactory.Managed
             .newScheduledExecutorService(ClassUtils.getCanonicalName(NamingApp.class),
                     Integer.max(Integer.getInteger("com.alibaba.nacos.naming.health.thread.num", DEFAULT_THREAD_COUNT),
@@ -192,7 +194,15 @@ public class GlobalExecutor {
     public static ScheduledFuture<?> scheduleNamingHealth(Runnable command, long delay, TimeUnit unit) {
         return NAMING_HEALTH_EXECUTOR.schedule(command, delay, unit);
     }
-    
+
+    /**
+     * 定时延迟周期健康检查
+     * @param command
+     * @param initialDelay
+     * @param delay
+     * @param unit
+     * @return
+     */
     public static ScheduledFuture<?> scheduleNamingHealth(Runnable command, long initialDelay, long delay,
             TimeUnit unit) {
         return NAMING_HEALTH_EXECUTOR.scheduleWithFixedDelay(command, initialDelay, delay, unit);

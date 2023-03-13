@@ -40,11 +40,15 @@ public class ServiceInfo {
     private String jsonFromServer = EMPTY;
     
     public static final String SPLITER = "@@";
-    
+    /**
+     * 服务名
+     */
     private String name;
     
     private String groupName;
-    
+    /**
+     * 集群字符串
+     */
     private String clusters;
     
     private long cacheMillis = 1000L;
@@ -220,7 +224,11 @@ public class ServiceInfo {
         }
         return getKey(serviceName, clusters);
     }
-    
+
+    /**
+     * 获取服务名（组名@@服务名）
+     * @return
+     */
     private String getGroupedServiceName() {
         String serviceName = this.name;
         if (!isEmpty(groupName) && serviceName.indexOf(Constants.SERVICE_INFO_SPLITER) == -1) {

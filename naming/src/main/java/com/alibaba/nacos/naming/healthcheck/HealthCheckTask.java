@@ -27,7 +27,7 @@ import org.apache.commons.lang3.RandomUtils;
 
 /**
  * Health check task.
- *
+ *集群的健康检查任务
  * @author nacos
  */
 public class HealthCheckTask implements Runnable {
