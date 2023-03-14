@@ -213,7 +213,12 @@ public class Instance implements Serializable {
     private static boolean strEquals(final String str1, final String str2) {
         return str1 == null ? str2 == null : str1.equals(str2);
     }
-    
+
+    /**
+     * 获取实例的心跳间隔时间
+     * 默认5S中
+     * @return
+     */
     public long getInstanceHeartBeatInterval() {
         return getMetaDataByKeyWithDefault(PreservedMetadataKeys.HEART_BEAT_INTERVAL,
                 Constants.DEFAULT_HEART_BEAT_INTERVAL);

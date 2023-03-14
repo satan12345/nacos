@@ -49,7 +49,9 @@ public class Instance extends com.alibaba.nacos.api.naming.pojo.Instance impleme
     private static final double MIN_WEIGHT_VALUE = 0.00D;
     
     private static final long serialVersionUID = -6527721638428975306L;
-    
+    /**
+     * 最后的心跳时间
+     */
     private volatile long lastBeat = System.currentTimeMillis();
     
     @JsonIgnore

@@ -126,9 +126,12 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
      * @param rsInfo metrics info of server
      */
     public void processClientBeat(final RsInfo rsInfo) {
+        //封装心跳的处理的参数
         ClientBeatProcessor clientBeatProcessor = new ClientBeatProcessor();
         clientBeatProcessor.setService(this);
         clientBeatProcessor.setRsInfo(rsInfo);
+
+        //定时任务  立即执行
         HealthCheckReactor.scheduleNow(clientBeatProcessor);
     }
     
@@ -382,11 +385,12 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
     public List<Instance> allIPs(List<String> clusters) {
         List<Instance> result = new ArrayList<>();
         for (String cluster : clusters) {
+            //获取集群信息
             Cluster clusterObj = clusterMap.get(cluster);
             if (clusterObj == null) {
                 continue;
             }
-            
+            //获取集群下的服务实例
             result.addAll(clusterObj.allIPs());
         }
         return result;
@@ -400,6 +404,7 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
      */
     public List<Instance> srvIPs(List<String> clusters) {
         if (CollectionUtils.isEmpty(clusters)) {
+            //查询集群为空 则查询服务下的所有集群
             clusters = new ArrayList<>();
             clusters.addAll(clusterMap.keySet());
         }

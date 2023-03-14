@@ -228,7 +228,7 @@ public class NacosNamingService implements NamingService {
         //服务名与group名拼接  groupName&&ServiceName
         String groupedServiceName = NamingUtils.getGroupedName(serviceName, groupName);
         if (instance.isEphemeral()) {
-            //临时节点 构建心跳检测参数
+            //临时节点 构建心跳检测对象
             BeatInfo beatInfo = beatReactor.buildBeatInfo(groupedServiceName, instance);
             beatReactor.addBeatInfo(groupedServiceName, beatInfo);
         }

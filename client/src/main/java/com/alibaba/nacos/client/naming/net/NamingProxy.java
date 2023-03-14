@@ -394,7 +394,7 @@ public class NamingProxy implements Closeable {
     
     /**
      * Query instance list.
-     *
+     * 查询服务的实例信息
      * @param serviceName service name
      * @param clusters    clusters
      * @param udpPort     udp port
@@ -406,6 +406,14 @@ public class NamingProxy implements Closeable {
             throws NacosException {
         
         final Map<String, String> params = new HashMap<String, String>(8);
+        /**
+         *{healthyOnly=false,
+         * serviceName=DEFAULT_GROUP@@product-center,
+         * udpPort=52792,
+         * namespaceId=public,
+         * clusters=,
+         * clientIP=172.31.1.1}
+         */
         params.put(CommonParams.NAMESPACE_ID, namespaceId);
         params.put(CommonParams.SERVICE_NAME, serviceName);
         params.put("clusters", clusters);
@@ -439,6 +447,7 @@ public class NamingProxy implements Closeable {
         params.put(CommonParams.CLUSTER_NAME, beatInfo.getCluster());
         params.put("ip", beatInfo.getIp());
         params.put("port", String.valueOf(beatInfo.getPort()));
+        //心跳检测
         String result = reqApi(UtilAndComs.nacosUrlBase + "/instance/beat", params, bodyMap, HttpMethod.PUT);
         return JacksonUtils.toObj(result);
     }
@@ -520,7 +529,7 @@ public class NamingProxy implements Closeable {
      */
     public String reqApi(String api, Map<String, String> params, Map<String, String> body, List<String> servers,
             String method) throws NacosException {
-        
+        //填充命名空间
         params.put(CommonParams.NAMESPACE_ID, getNamespaceId());
         //服务器地址判断
         if (CollectionUtils.isEmpty(servers) && StringUtils.isBlank(nacosDomain)) {

@@ -80,6 +80,7 @@ public class ClientBeatProcessor implements Runnable {
                 if (Loggers.EVT_LOG.isDebugEnabled()) {
                     Loggers.EVT_LOG.debug("[CLIENT-BEAT] refresh beat: {}", rsInfo.toString());
                 }
+                //获取指定的实例修改最后心跳的时间为当前的系统时间
                 instance.setLastBeat(System.currentTimeMillis());
                 if (!instance.isMarked() && !instance.isHealthy()) {
                     instance.setHealthy(true);
@@ -87,6 +88,7 @@ public class ClientBeatProcessor implements Runnable {
                             .info("service: {} {POS} {IP-ENABLED} valid: {}:{}@{}, region: {}, msg: client beat ok",
                                     cluster.getService().getName(), ip, port, cluster.getName(),
                                     UtilsAndCommons.LOCALHOST_SITE);
+                    //服务发生变化 发布事件
                     getPushService().serviceChanged(service);
                 }
             }

@@ -85,7 +85,10 @@ public class BeatReactor implements Closeable {
         if ((existBeat = dom2Beat.put(key, beatInfo)) != null) {
             existBeat.setStopped(true);
         }
-        executorService.schedule(new BeatTask(beatInfo), beatInfo.getPeriod(), TimeUnit.MILLISECONDS);
+        //封装心跳检测任务
+        BeatTask beatTask = new BeatTask(beatInfo);
+        //延迟5S之后执行
+        executorService.schedule(beatTask, beatInfo.getPeriod(), TimeUnit.MILLISECONDS);
         MetricsMonitor.getDom2BeatSizeMonitor().set(dom2Beat.size());
     }
     
@@ -132,7 +135,7 @@ public class BeatReactor implements Closeable {
         beatInfo.setWeight(instance.getWeight());
         beatInfo.setMetadata(instance.getMetadata());
         beatInfo.setScheduled(false);
-        beatInfo.setPeriod(instance.getInstanceHeartBeatInterval());
+        beatInfo.setPeriod(instance.getInstanceHeartBeatInterval());//周期 5s
         return beatInfo;
     }
     
@@ -161,8 +164,10 @@ public class BeatReactor implements Closeable {
             if (beatInfo.isStopped()) {
                 return;
             }
+            //下次执行时间
             long nextTime = beatInfo.getPeriod();
             try {
+                //发送心跳检测
                 JsonNode result = serverProxy.sendBeat(beatInfo, BeatReactor.this.lightBeatEnabled);
                 long interval = result.get("clientBeatInterval").asLong();
                 boolean lightBeatEnabled = false;
@@ -201,6 +206,7 @@ public class BeatReactor implements Closeable {
                 NAMING_LOGGER.error("[CLIENT-BEAT] failed to send beat: {}, unknown exception msg: {}",
                         JacksonUtils.toJson(beatInfo), unknownEx.getMessage(), unknownEx);
             } finally {
+                //再次延时
                 executorService.schedule(new BeatTask(beatInfo), nextTime, TimeUnit.MILLISECONDS);
             }
         }

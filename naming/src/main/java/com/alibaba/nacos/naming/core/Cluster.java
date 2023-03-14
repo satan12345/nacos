@@ -123,7 +123,7 @@ public class Cluster extends com.alibaba.nacos.api.naming.pojo.Cluster implement
 
     /**
      * Get all instances.
-     *
+     * 获取集群的所有实例  临时实例和持久实例
      * @return list of instance
      */
     public List<Instance> allIPs() {

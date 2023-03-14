@@ -392,7 +392,7 @@ public class HostReactor implements Closeable {
     public void updateService(String serviceName, String clusters) throws NacosException {
         ServiceInfo oldService = getServiceInfo0(serviceName, clusters);
         try {
-            
+            //从服务器上查询服务信息
             String result = serverProxy.queryList(serviceName, clusters, pushReceiver.getUdpPort(), false);
             //接收到服务器数据 进行处理
             if (StringUtils.isNotEmpty(result)) {

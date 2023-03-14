@@ -385,9 +385,10 @@ public class InstanceController {
     @GetMapping("/list")
     @Secured(parser = NamingResourceParser.class, action = ActionTypes.READ)
     public ObjectNode list(HttpServletRequest request) throws Exception {
-        
+        //从request请求中提取相关参数
         String namespaceId = WebUtils.optional(request, CommonParams.NAMESPACE_ID, Constants.DEFAULT_NAMESPACE_ID);
         String serviceName = WebUtils.required(request, CommonParams.SERVICE_NAME);
+        // 服务名检查
         NamingUtils.checkServiceNameFormat(serviceName);
         
         String agent = WebUtils.getUserAgent(request);
@@ -471,8 +472,9 @@ public class InstanceController {
         
         ObjectNode result = JacksonUtils.createEmptyJsonNode();
         result.put(SwitchEntry.CLIENT_BEAT_INTERVAL, switchDomain.getClientBeatInterval());
-        
+        //获取心跳信息
         String beat = WebUtils.optional(request, "beat", StringUtils.EMPTY);
+        System.out.println("beat = " + beat);
         RsInfo clientBeat = null;
         if (StringUtils.isNotBlank(beat)) {
             clientBeat = JacksonUtils.toObj(beat, RsInfo.class);
@@ -495,17 +497,19 @@ public class InstanceController {
         String serviceName = WebUtils.required(request, CommonParams.SERVICE_NAME);
         NamingUtils.checkServiceNameFormat(serviceName);
         Loggers.SRV_LOG.debug("[CLIENT-BEAT] full arguments: beat: {}, serviceName: {}", clientBeat, serviceName);
+        //查询服务实例
         Instance instance = serviceManager.getInstance(namespaceId, serviceName, clusterName, ip, port);
         
         if (instance == null) {
             if (clientBeat == null) {
+                //查询不到实例信息
                 result.put(CommonParams.CODE, NamingResponseCode.RESOURCE_NOT_FOUND);
                 return result;
             }
             
             Loggers.SRV_LOG.warn("[CLIENT-BEAT] The instance has been removed for health mechanism, "
                     + "perform data compensation operations, beat: {}, serviceName: {}", clientBeat, serviceName);
-            
+            //服务端查询不到该实例信息 则将该服务实例信息注册
             instance = new Instance();
             instance.setPort(clientBeat.getPort());
             instance.setIp(clientBeat.getIp());
@@ -515,10 +519,10 @@ public class InstanceController {
             instance.setServiceName(serviceName);
             instance.setInstanceId(instance.getInstanceId());
             instance.setEphemeral(clientBeat.isEphemeral());
-            
+            //注册实例
             serviceManager.registerInstance(namespaceId, serviceName, instance);
         }
-        
+        //获取服务
         Service service = serviceManager.getService(namespaceId, serviceName);
         
         if (service == null) {
@@ -531,6 +535,7 @@ public class InstanceController {
             clientBeat.setPort(port);
             clientBeat.setCluster(clusterName);
         }
+        //处理客户端心跳检测
         service.processClientBeat(clientBeat);
         
         result.put(CommonParams.CODE, NamingResponseCode.OK);
@@ -656,11 +661,11 @@ public class InstanceController {
     /**
      * Get service full information with instances.
      *
-     * @param namespaceId namespace id
-     * @param serviceName service name
-     * @param agent       agent infor string
-     * @param clusters    cluster names
-     * @param clientIP    client ip
+     * @param namespaceId namespace id 命名空间
+     * @param serviceName service name 服务名
+     * @param agent       agent infor string 代理
+     * @param clusters    cluster names 集群名
+     * @param clientIP    client ip 客户端id
      * @param udpPort     push udp port
      * @param env         env
      * @param isCheck     is check request
@@ -675,7 +680,9 @@ public class InstanceController {
         
         ClientInfo clientInfo = new ClientInfo(agent);
         ObjectNode result = JacksonUtils.createEmptyJsonNode();
+        //获取服务
         Service service = serviceManager.getService(namespaceId, serviceName);
+
         long cacheMillis = switchDomain.getDefaultCacheMillis();
         
         // now try to enable the push
@@ -705,10 +712,8 @@ public class InstanceController {
         }
         
         checkIfDisabled(service);
-        
-        List<Instance> srvedIPs;
-        
-        srvedIPs = service.srvIPs(Arrays.asList(StringUtils.split(clusters, ",")));
+        //获取服务指定集群下的实例信息
+        List<Instance> srvedIPs = service.srvIPs(Arrays.asList(StringUtils.split(clusters, ",")));
         
         // filter ips using selector:
         if (service.getSelector() != null && StringUtils.isNotBlank(clientIP)) {

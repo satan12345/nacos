@@ -717,7 +717,16 @@ public class ServiceManager implements RecordListener<Service> {
         
         consistencyService.put(key, instances);
     }
-    
+
+    /**
+     * 查询实例的信息
+     * @param namespaceId
+     * @param serviceName
+     * @param cluster
+     * @param ip
+     * @param port
+     * @return
+     */
     public Instance getInstance(String namespaceId, String serviceName, String cluster, String ip, int port) {
         Service service = getService(namespaceId, serviceName);
         if (service == null) {
