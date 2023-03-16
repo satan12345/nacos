@@ -53,6 +53,8 @@ public class ServiceStatusSynchronizer implements Synchronizer {
         }
         
         try {
+            //url http://172.31.1.1:8878/nacos/v1/ns/service/status
+            //{"clientIP":"172.31.1.1:8858","statuses":"{\"namespaceId\":\"public\",\"serviceName2Checksum\":{}}"}
             HttpClient.asyncHttpPostLarge(url, null, JacksonUtils.toJson(params), new Callback<String>() {
                 @Override
                 public void onReceive(RestResult<String> result) {
@@ -86,7 +88,7 @@ public class ServiceStatusSynchronizer implements Synchronizer {
         }
         
         Map<String, String> params = new HashMap<>(1);
-        
+        //namespace##serviceName
         params.put("key", key);
         
         String result;
@@ -94,6 +96,7 @@ public class ServiceStatusSynchronizer implements Synchronizer {
             if (Loggers.SRV_LOG.isDebugEnabled()) {
                 Loggers.SRV_LOG.debug("[STATUS-SYNCHRONIZE] sync service status from: {}, service: {}", serverIP, key);
             }
+            // /nacos/v1/ns/instance/statuses
             result = NamingProxy
                     .reqApi(EnvUtil.getContextPath() + UtilsAndCommons.NACOS_NAMING_CONTEXT + "/instance/"
                             + "statuses", params, serverIP);

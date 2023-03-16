@@ -91,7 +91,9 @@ public class ServiceManager implements RecordListener<Service> {
      *
      */
     private final Map<String, Map<String, Service>> serviceMap = new ConcurrentHashMap<>();
-    
+    /**
+     * 保存需要被更新的Service队列
+     */
     private final LinkedBlockingDeque<ServiceKey> toBeUpdatedServicesQueue = new LinkedBlockingDeque<>(1024 * 1024);
     
     private final Synchronizer synchronizer = new ServiceStatusSynchronizer();
@@ -138,6 +140,7 @@ public class ServiceManager implements RecordListener<Service> {
      */
     @PostConstruct
     public void init() {
+        //服务数据同步
         GlobalExecutor.scheduleServiceReporter(new ServiceReporter(), 60000, TimeUnit.MILLISECONDS);
         
         GlobalExecutor.submitServiceUpdateManager(new UpdatedServiceProcessor());
@@ -273,6 +276,7 @@ public class ServiceManager implements RecordListener<Service> {
             try {
                 while (true) {
                     try {
+                        //获取需要被更新的服务信息
                         serviceKey = toBeUpdatedServicesQueue.take();
                     } catch (Exception e) {
                         Loggers.EVT_LOG.error("[UPDATE-DOMAIN] Exception while taking item from LinkedBlockingDeque.");
@@ -281,6 +285,7 @@ public class ServiceManager implements RecordListener<Service> {
                     if (serviceKey == null) {
                         continue;
                     }
+                    //再次封装 线程池异步处理
                     GlobalExecutor.submitServiceUpdate(new ServiceUpdater(serviceKey));
                 }
             } catch (Exception e) {
@@ -321,12 +326,13 @@ public class ServiceManager implements RecordListener<Service> {
     
     /**
      * Update health status of instance in service.
-     *
+     *更新服务实例的健康中途
      * @param namespaceId namespace
      * @param serviceName service name
      * @param serverIP    source server Ip
      */
     public void updatedHealthStatus(String namespaceId, String serviceName, String serverIP) {
+        //ServiceStatusSynchronizer
         Message msg = synchronizer.get(serverIP, UtilsAndCommons.assembleFullServiceName(namespaceId, serviceName));
         JsonNode serviceJson = JacksonUtils.toObj(msg.getData());
         
@@ -671,7 +677,7 @@ public class ServiceManager implements RecordListener<Service> {
         String key = KeyBuilder.buildInstanceListKey(namespaceId, serviceName, ephemeral);
         //获取Service
         Service service = getService(namespaceId, serviceName);
-        
+        //同步操作
         synchronized (service) {
             //添加服务 返回所有实例集合
             List<Instance> instanceList = addIpAddresses(service, ephemeral, ips);
@@ -689,7 +695,7 @@ public class ServiceManager implements RecordListener<Service> {
     
     /**
      * Remove instance from service.
-     *
+     * 从服务中移除实例
      * @param namespaceId namespace
      * @param serviceName service name
      * @param ephemeral   whether instance is ephemeral
@@ -701,20 +707,30 @@ public class ServiceManager implements RecordListener<Service> {
         Service service = getService(namespaceId, serviceName);
         
         synchronized (service) {
+            //同步删除
             removeInstance(namespaceId, serviceName, ephemeral, service, ips);
         }
     }
-    
+
+    /**
+     * 删除实例
+     * @param namespaceId
+     * @param serviceName
+     * @param ephemeral
+     * @param service
+     * @param ips
+     * @throws NacosException
+     */
     private void removeInstance(String namespaceId, String serviceName, boolean ephemeral, Service service,
             Instance... ips) throws NacosException {
         
         String key = KeyBuilder.buildInstanceListKey(namespaceId, serviceName, ephemeral);
-        
+        //更新 返回值为移除实例后剩余的实例信息
         List<Instance> instanceList = substractIpAddresses(service, ephemeral, ips);
         
         Instances instances = new Instances();
         instances.setInstanceList(instanceList);
-        
+        //更新操作 同样只是绑定key和剩余实例的关系
         consistencyService.put(key, instances);
     }
 
@@ -815,7 +831,7 @@ public class ServiceManager implements RecordListener<Service> {
      */
     public List<Instance> updateIpAddresses(Service service, String action, boolean ephemeral, Instance... ips)
             throws NacosException {
-
+        //key = com.alibaba.nacos.naming.iplist.ephemeral.public##DEFAULT_GROUP@@product-center
         String key = KeyBuilder
             .buildInstanceListKey(service.getNamespaceId(), service.getName(), ephemeral);
         //DelegateConsistencyServiceImpl 获取服务下的之前实例数据
@@ -852,8 +868,7 @@ public class ServiceManager implements RecordListener<Service> {
                 cluster.init();
                 //将集群放到service  的属性中
                 service.getClusterMap().put(instance.getClusterName(), cluster);
-                Loggers.SRV_LOG
-                        .warn("cluster: {} not found, ip: {}, will create new cluster with default configuration.",
+                Loggers.SRV_LOG.warn("cluster: {} not found, ip: {}, will create new cluster with default configuration.",
                                 instance.getClusterName(), instance.toJson());
             }
             
@@ -864,7 +879,7 @@ public class ServiceManager implements RecordListener<Service> {
                 //获取老的实例
                 Instance oldInstance = instanceMap.get(instance.getDatumKey());
                 if (oldInstance != null) {
-                    //属于实例更新
+                    //属于实例更新 把原来的实例id赋值给更新的实例id
                     instance.setInstanceId(oldInstance.getInstanceId());
                 } else {
                     //属于新增实例 为新的实例设置实例id
@@ -884,12 +899,29 @@ public class ServiceManager implements RecordListener<Service> {
         //返回所有的实例集合
         return new CopyOnWriteArrayList<>(instanceMap.values());
     }
-    
+
+    /**
+     * 服务下线
+     * @param service
+     * @param ephemeral
+     * @param ips
+     * @return
+     * @throws NacosException
+     */
     private List<Instance> substractIpAddresses(Service service, boolean ephemeral, Instance... ips)
             throws NacosException {
+
         return updateIpAddresses(service, UtilsAndCommons.UPDATE_INSTANCE_ACTION_REMOVE, ephemeral, ips);
     }
-    
+
+    /**
+     * 新增实例
+     * @param service
+     * @param ephemeral
+     * @param ips
+     * @return
+     * @throws NacosException
+     */
     private List<Instance> addIpAddresses(Service service, boolean ephemeral, Instance... ips) throws NacosException {
         //更新服务
         return updateIpAddresses(service, UtilsAndCommons.UPDATE_INSTANCE_ACTION_ADD, ephemeral, ips);
@@ -899,6 +931,7 @@ public class ServiceManager implements RecordListener<Service> {
         
         Map<String, Instance> instanceMap = new HashMap<>(oldInstances.size());
         for (Instance instance : oldInstances) {
+            //把缓存里的数据 用注册表中的数据再更新一下
             Instance instance1 = map.get(instance.toIpAddr());
             if (instance1 != null) {
                 instance.setHealthy(instance1.isHealthy());
@@ -908,7 +941,13 @@ public class ServiceManager implements RecordListener<Service> {
         }
         return instanceMap;
     }
-    
+
+    /**
+     * 获取服务信息
+     * @param namespaceId
+     * @param serviceName
+     * @return
+     */
     public Service getService(String namespaceId, String serviceName) {
         //获取第一层map
         if (serviceMap.get(namespaceId) == null) {
@@ -942,7 +981,9 @@ public class ServiceManager implements RecordListener<Service> {
     }
     
     private void putServiceAndInit(Service service) throws NacosException {
+        //把创建的服务放到内存结构中去
         putService(service);
+        //再次获取服务
         service = getService(service.getNamespaceId(), service.getName());
         //服务初始化
         service.init();
@@ -1017,6 +1058,7 @@ public class ServiceManager implements RecordListener<Service> {
         }
         
         if (!CollectionUtils.isEmpty(matchList) && hasIpCount) {
+            //在查询的时候把服务实例为空的服务移除掉 不显示 但是内存中并没有移除掉该Service
             matchList = matchList.stream().filter(s -> !CollectionUtils.isEmpty(s.allIPs()))
                     .collect(Collectors.toList());
         }
@@ -1156,25 +1198,28 @@ public class ServiceManager implements RecordListener<Service> {
         @Override
         public void run() {
             try {
-                
+                //获取所有的服务
                 Map<String, Set<String>> allServiceNames = getAllServiceNames();
                 
                 if (allServiceNames.size() <= 0) {
                     //ignore
                     return;
                 }
-                
+                //遍历命名空间
                 for (String namespaceId : allServiceNames.keySet()) {
-                    
+                    //封装参数
                     ServiceChecksum checksum = new ServiceChecksum(namespaceId);
                     
                     for (String serviceName : allServiceNames.get(namespaceId)) {
+//                        System.out.println("serviceName = " + serviceName);
                         if (!distroMapper.responsible(serviceName)) {
+                            //判断该服务的Service数据是否由本机负责 只有由本机负责的Service 才需要同步给别的集群节点
                             continue;
                         }
-                        
+                        //获取服务信息
                         Service service = getService(namespaceId, serviceName);
-                        
+//                        System.out.println(
+//                            "service.getClusterMap().size() = " + service.getClusterMap().size());
                         if (service == null || service.isEmpty()) {
                             continue;
                         }
@@ -1185,7 +1230,7 @@ public class ServiceManager implements RecordListener<Service> {
                     }
                     
                     Message msg = new Message();
-                    
+                    //{"namespaceId":"public","serviceName2Checksum":{"DEFAULT_GROUP@@order-center":"4549474fc98333c170d7c14bb0105e68"}}
                     msg.setData(JacksonUtils.toJson(checksum));
                     
                     Collection<Member> sameSiteServers = memberManager.allMembers();
@@ -1196,8 +1241,10 @@ public class ServiceManager implements RecordListener<Service> {
                     
                     for (Member server : sameSiteServers) {
                         if (server.getAddress().equals(NetUtils.localServer())) {
+                            //排除自己
                             continue;
                         }
+                        //同步数据到别的服务
                         synchronizer.send(server.getAddress(), msg);
                     }
                 }

@@ -88,7 +88,7 @@ public class DistroLoadDataTask implements Runnable {
             }
         }
     }
-    
+    //从远端拉取数据
     private boolean loadAllDataSnapshotFromRemote(String resourceType) {
         DistroTransportAgent transportAgent = distroComponentHolder.findTransportAgent(resourceType);
         DistroDataProcessor dataProcessor = distroComponentHolder.findDataProcessor(resourceType);
@@ -100,12 +100,15 @@ public class DistroLoadDataTask implements Runnable {
         for (Member each : memberManager.allMembersWithoutSelf()) {
             try {
                 Loggers.DISTRO.info("[DISTRO-INIT] load snapshot {} from {}", resourceType, each.getAddress());
+                //从远端获取数据
                 DistroData distroData = transportAgent.getDatumSnapshot(each.getAddress());
+                //判断快照数据是否处理成功
                 boolean result = dataProcessor.processSnapshot(distroData);
                 Loggers.DISTRO
                         .info("[DISTRO-INIT] load snapshot {} from {} result: {}", resourceType, each.getAddress(),
                                 result);
                 if (result) {
+                    //如果成功则就跳出循环
                     return true;
                 }
             } catch (Exception e) {

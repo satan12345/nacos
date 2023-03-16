@@ -32,7 +32,12 @@ import java.util.Map;
  * @deprecated 1.3.0 This object will be deleted sometime after version 1.3.0
  */
 public class ServerStatusSynchronizer implements Synchronizer {
-    
+
+    /**
+     * 往别的服务器发送消息
+     * @param serverIP target server address
+     * @param msg      message to send
+     */
     @Override
     public void send(final String serverIP, Message msg) {
         if (StringUtils.isEmpty(serverIP)) {
@@ -52,6 +57,7 @@ public class ServerStatusSynchronizer implements Synchronizer {
         }
         
         try {
+            //http://172.31.1.1:8878/nacos/v1/ns/operator/server/status
             HttpClient.asyncHttpGet(url, null, params, new Callback<String>() {
                 @Override
                 public void onReceive(RestResult<String> result) {

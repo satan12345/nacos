@@ -114,6 +114,7 @@ public class ServerMemberManager implements ApplicationListener<WebServerInitial
     
     /**
      * here is always the node information of the "UP" state.
+     * 只保存在线的服务器地址
      */
     private volatile Set<String> memberAddressInfos = new ConcurrentHashSet<>();
     
@@ -203,18 +204,25 @@ public class ServerMemberManager implements ApplicationListener<WebServerInitial
         
         String address = newMember.getAddress();
         if (!serverList.containsKey(address)) {
+            //集群中不包含该服务器
             return false;
         }
         
         serverList.computeIfPresent(address, (s, member) -> {
+            //获取要更新的服务器
             if (NodeState.DOWN.equals(newMember.getState())) {
+                //移除掉下线的服务器信息
                 memberAddressInfos.remove(newMember.getAddress());
             }
+            //判断是否是基础信息发生变化
             boolean isPublishChangeEvent = MemberUtil.isBasicInfoChanged(newMember, member);
+            //更新服务器的最后刷新时间
             newMember.setExtendVal(MemberMetaDataConstants.LAST_REFRESH_TIME, System.currentTimeMillis());
+            //更新服务器信息
             MemberUtil.copy(newMember, member);
             if (isPublishChangeEvent) {
                 // member basic data changes and all listeners need to be notified
+                //基础信息发生变化 触发事件
                 notifyMemberChange();
             }
             return member;

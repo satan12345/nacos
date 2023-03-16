@@ -78,16 +78,19 @@ public class ClientBeatCheckTask implements Runnable {
     }
 
     /**
-     * 线程任务
+     * 心跳检查线程任务
      */
     @Override
     public void run() {
         try {
+            //判断本机是否该负责指定服务的心跳检测任务
             if (!getDistroMapper().responsible(service.getName())) {
+                //根据服务名选取特定的服务端节点做心跳检查任务
                 return;
             }
             
             if (!getSwitchDomain().isHealthCheckEnabled()) {
+                //是否启用服务的健康检查 默认启用返回true 取反 false 不进入if
                 return;
             }
             //获取服务的所有临时实例
@@ -122,7 +125,7 @@ public class ClientBeatCheckTask implements Runnable {
 
                 return;
             }
-            
+            //超过删除时间 30S
             // then remove obsolete instances:
             for (Instance instance : instances) {
                 

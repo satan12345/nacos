@@ -252,8 +252,9 @@ public class OperatorController {
     }
     
     /**
+     * 用于接收其他服务器
      * This interface will be removed in a future release.
-     *
+     * 当我兴冲冲地看到这里  你跟我说要删除了 那你替换的代码在哪呀
      * @param serverStatus server status
      * @return "ok"
      * @deprecated 1.3.0 This function will be deleted sometime after version 1.3.0
@@ -261,6 +262,7 @@ public class OperatorController {
     @Deprecated
     @RequestMapping("/server/status")
     public String serverStatus(@RequestParam String serverStatus) {
+        //unknown#172.31.1.1:8858#1678934709732#6
         serverListManager.onReceiveServerStatus(serverStatus);
         return "ok";
     }

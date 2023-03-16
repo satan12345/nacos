@@ -81,25 +81,32 @@ public class DistroMapper extends MemberChangeListener {
      * @return true if input service is response, otherwise false
      */
     public boolean responsible(String serviceName) {
+        //服务器健康节点列表
         final List<String> servers = healthyList;
         
         if (!switchDomain.isDistroEnabled() || EnvUtil.getStandaloneMode()) {
+            //如果启用distor或者是单机模式启动的话 就应该负责
             return true;
         }
         
         if (CollectionUtils.isEmpty(servers)) {
             // means distro config is not ready yet
+            //还没有服务器节点列表 则不负责心跳检测
             return false;
         }
         
         String localAddress = EnvUtil.getLocalAddress();
+        //从前往后找当前服务器所在的位置
         int index = servers.indexOf(localAddress);
+        //从后往前找 当前服务器所在的位置
         int lastIndex = servers.lastIndexOf(localAddress);
         if (lastIndex < 0 || index < 0) {
+            //本机不在健康列表中 则表示本地无法与其他机器同步数据 则本机需要删除数据
             return true;
         }
-        
+        //要操作的服务HASH 再取模
         int target = distroHash(serviceName) % servers.size();
+        //如果计算出来的 target 正好是本机地址，那么不需要转发，直接本机处理
         return target >= index && target <= lastIndex;
     }
     

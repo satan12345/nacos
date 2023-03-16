@@ -28,6 +28,7 @@ import com.alibaba.nacos.core.distributed.distro.entity.DistroData;
 import com.alibaba.nacos.core.distributed.distro.entity.DistroKey;
 import com.alibaba.nacos.core.distributed.distro.task.DistroTaskEngineHolder;
 import com.alibaba.nacos.core.distributed.distro.task.delay.DistroDelayTask;
+import com.alibaba.nacos.core.distributed.distro.task.delay.DistroDelayTaskExecuteEngine;
 import com.alibaba.nacos.core.distributed.distro.task.load.DistroLoadDataTask;
 import com.alibaba.nacos.core.distributed.distro.task.verify.DistroVerifyTask;
 import com.alibaba.nacos.core.utils.GlobalExecutor;
@@ -59,6 +60,7 @@ public class DistroProtocol {
         this.distroComponentHolder = distroComponentHolder;
         this.distroTaskEngineHolder = distroTaskEngineHolder;
         this.distroConfig = distroConfig;
+        //开启任务
         startDistroTask();
     }
     
@@ -68,6 +70,7 @@ public class DistroProtocol {
             return;
         }
         startVerifyTask();
+        //开始加载数据的任务
         startLoadTask();
     }
     
@@ -83,8 +86,10 @@ public class DistroProtocol {
                 isInitialized = false;
             }
         };
-        GlobalExecutor.submitLoadDataTask(
-                new DistroLoadDataTask(memberManager, distroComponentHolder, distroConfig, loadCallback));
+        DistroLoadDataTask runnable = new DistroLoadDataTask(memberManager, distroComponentHolder,
+            distroConfig, loadCallback);
+        //提交加载数据的定时任务
+        GlobalExecutor.submitLoadDataTask(runnable);
     }
     
     private void startVerifyTask() {
@@ -113,11 +118,16 @@ public class DistroProtocol {
      * @param action    the action of data operation
      */
     public void sync(DistroKey distroKey, DataOperation action, long delay) {
+        //遍历除本机之外的其他服务器节点
         for (Member each : memberManager.allMembersWithoutSelf()) {
             DistroKey distroKeyWithTarget = new DistroKey(distroKey.getResourceKey(), distroKey.getResourceType(),
                     each.getAddress());
+            //要执行的任务
             DistroDelayTask distroDelayTask = new DistroDelayTask(distroKeyWithTarget, action, delay);
-            distroTaskEngineHolder.getDelayTaskExecuteEngine().addTask(distroKeyWithTarget, distroDelayTask);
+            //获取延迟执行引擎  添加任务 DistroDelayTaskExecuteEngine
+            DistroDelayTaskExecuteEngine delayTaskExecuteEngine = distroTaskEngineHolder.getDelayTaskExecuteEngine();
+            //添加任务 即同步数据
+            delayTaskExecuteEngine.addTask(distroKeyWithTarget, distroDelayTask);
             if (Loggers.DISTRO.isDebugEnabled()) {
                 Loggers.DISTRO.debug("[DISTRO-SCHEDULE] {} to {}", distroKey, each.getAddress());
             }

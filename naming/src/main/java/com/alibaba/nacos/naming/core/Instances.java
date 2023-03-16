@@ -45,7 +45,11 @@ public class Instances implements Record {
     public List<Instance> getInstanceList() {
         return instanceList;
     }
-    
+
+    /**
+     *
+     * @param instanceList
+     */
     public void setInstanceList(List<Instance> instanceList) {
         this.instanceList = new CopyOnWriteArrayList<>(instanceList);
     }

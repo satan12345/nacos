@@ -137,6 +137,7 @@ public class NamingProxy {
     public static byte[] getAllData(String server) throws Exception {
         
         Map<String, String> params = new HashMap<>(8);
+        // http://ip/nacos/v1/ns/distro/datums
         RestResult<String> result = HttpClient.httpGet(
                 "http://" + server + EnvUtil.getContextPath() + UtilsAndCommons.NACOS_NAMING_CONTEXT + ALL_DATA_GET_URL,
                 new ArrayList<>(), params);
@@ -152,7 +153,7 @@ public class NamingProxy {
     
     /**
      * Synchronize datum to target server.
-     *
+     *同步数据
      * @param data      datum
      * @param curServer target server address
      * @return true if sync successfully, otherwise false
@@ -167,6 +168,7 @@ public class NamingProxy {
         headers.put(HttpHeaderConsts.CONTENT_ENCODING, "gzip");
         
         try {
+            //http://ip/nacos/v1/ns/distro/datum
             RestResult<String> result = HttpClient.httpPutLarge(
                     "http://" + curServer + EnvUtil.getContextPath() + UtilsAndCommons.NACOS_NAMING_CONTEXT
                             + DATA_ON_SYNC_URL, headers, data);

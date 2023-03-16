@@ -365,12 +365,13 @@ public class ServiceController {
         String entity = IoUtils.toString(request.getInputStream(), "UTF-8");
         String value = URLDecoder.decode(entity, "UTF-8");
         JsonNode json = JacksonUtils.toObj(value);
-        
+        //{"clientIP":"172.31.1.1:8858","statuses":"{\"namespaceId\":\"public\",\"serviceName2Checksum\":{}}"}
         //format: service1@@checksum@@@service2@@checksum
         String statuses = json.get("statuses").asText();
         String serverIp = json.get("clientIP").asText();
         
         if (!memberManager.hasMember(serverIp)) {
+            //判断是否是集群中的节点
             throw new NacosException(NacosException.INVALID_PARAM, "ip: " + serverIp + " is not in serverlist");
         }
         
@@ -388,15 +389,17 @@ public class ServiceController {
                 }
                 String serviceName = entry.getKey();
                 String checksum = entry.getValue();
+                //获取服务
                 Service service = serviceManager.getService(checksums.namespaceId, serviceName);
                 
                 if (service == null) {
                     continue;
                 }
-                
+                //计算Service的checksum值
                 service.recalculateChecksum();
                 
                 if (!checksum.equals(service.getChecksum())) {
+                    //比较checkSum值  如果不相等 说明需要更新
                     if (Loggers.SRV_LOG.isDebugEnabled()) {
                         Loggers.SRV_LOG.debug("checksum of {} is not consistent, remote: {}, checksum: {}, local: {}",
                                 serviceName, serverIp, checksum, service.getChecksum());

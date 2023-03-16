@@ -71,12 +71,15 @@ public class ServerListManager extends MemberChangeListener {
         this.switchDomain = switchDomain;
         this.memberManager = memberManager;
         NotifyCenter.registerSubscriber(this);
+        //获取所有服务节点
         this.servers = new ArrayList<>(memberManager.allMembers());
     }
     
     @PostConstruct
     public void init() {
+        //服务状态上报的任务
         GlobalExecutor.registerServerStatusReporter(new ServerStatusReporter(), 2000);
+        //服务状态变更的任务
         GlobalExecutor.registerServerInfoUpdater(new ServerInfoUpdater());
     }
     
@@ -112,7 +115,7 @@ public class ServerListManager extends MemberChangeListener {
     public synchronized void onReceiveServerStatus(String configInfo) {
         
         Loggers.SRV_LOG.info("receive config info: {}", configInfo);
-        
+        //unknown#172.31.1.1:8858#1678934709732#6
         String[] configs = configInfo.split("\r\n");
         if (configs.length == 0) {
             return;
@@ -125,14 +128,16 @@ public class ServerListManager extends MemberChangeListener {
                 Loggers.SRV_LOG.warn("received malformed distro map data: {}", config);
                 continue;
             }
-    
+            //获取ip地址
             String[] info = IPUtil.splitIPPortStr(params[1]);
+            //获取服务器
             Member server = Optional.ofNullable(memberManager.find(params[1]))
                     .orElse(Member.builder().ip(info[0]).state(NodeState.UP)
                             .port(Integer.parseInt(info[1])).build());
             
             server.setExtendVal(MemberMetaDataConstants.SITE_KEY, params[0]);
             server.setExtendVal(MemberMetaDataConstants.WEIGHT, params.length == 4 ? Integer.parseInt(params[3]) : 1);
+            //更新服务器
             memberManager.update(server);
             
             if (!contains(server.getAddress())) {
@@ -185,7 +190,10 @@ public class ServerListManager extends MemberChangeListener {
             }
         }
     }
-    
+
+    /**
+     * 服务器状态上报
+     */
     private class ServerStatusReporter implements Runnable {
         
         @Override
@@ -202,21 +210,32 @@ public class ServerListManager extends MemberChangeListener {
                 }
                 
                 long curTime = System.currentTimeMillis();
+                //unknown#172.31.1.1:8858#1678934709732#6
+                //拼装需要发送给其他服务器的数据
                 String status = LOCALHOST_SITE + "#" + EnvUtil.getLocalAddress() + "#" + curTime + "#" + weight
                         + "\r\n";
-                
+                //获取所有server节点
+                /**
+                 * [Member{ip='172.31.1.1', port=8878, state=DOWN, extendInfo={raftPort=7878}},
+                 * Member{ip='172.31.1.1', port=8868, state=DOWN, extendInfo={raftPort=7868}},
+                 * Member{ip='172.31.1.1', port=8858, state=UP, extendInfo={lastRefreshTime=1678871559283, raftMetaData=com.alibaba.nacos.consistency.ProtocolMetaData@571248d6, raftPort=7858, version=1.4.4}}]
+                 */
                 List<Member> allServers = getServers();
-                
+//                System.out.println("allServers.toString() = " + allServers.toString());
+                //判断当前节点是否在集群中
                 if (!contains(EnvUtil.getLocalAddress())) {
+                    //本机ip地址不在集群的IP地址配置文件中
                     Loggers.SRV_LOG.error("local ip is not in serverlist, ip: {}, serverlist: {}",
                             EnvUtil.getLocalAddress(), allServers);
                     return;
                 }
-                
+
                 if (allServers.size() > 0 && !EnvUtil.getLocalAddress()
                         .contains(IPUtil.localHostIP())) {
+                    //集群中有节点 且本机地址不是127.0.0。1
                     for (Member server : allServers) {
                         if (Objects.equals(server.getAddress(), EnvUtil.getLocalAddress())) {
+                            //遍历到的服务器是本机 跳过
                             continue;
                         }
                         
@@ -231,7 +250,7 @@ public class ServerListManager extends MemberChangeListener {
                         
                         Message msg = new Message();
                         msg.setData(status);
-                        
+                        //往别的服务器发送数据
                         synchronizer.send(server.getAddress(), msg);
                     }
                 }

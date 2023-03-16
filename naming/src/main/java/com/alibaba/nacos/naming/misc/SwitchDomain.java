@@ -49,7 +49,9 @@ public class SwitchDomain implements Record, Cloneable {
     private long defaultCacheMillis = TimeUnit.SECONDS.toMillis(3);
     
     private float distroThreshold = 0.7F;
-    
+    /**
+     * 是否启用服务的健康检查
+     */
     private boolean healthCheckEnabled = true;
     
     private boolean autoChangeHealthCheckEnabled = true;

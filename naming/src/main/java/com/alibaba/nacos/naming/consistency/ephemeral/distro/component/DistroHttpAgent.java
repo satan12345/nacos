@@ -86,7 +86,12 @@ public class DistroHttpAgent implements DistroTransportAgent {
             throw new DistroException(String.format("Get data from %s failed.", key.getTargetServer()), e);
         }
     }
-    
+
+    /**
+     * 获取快照数据
+     * @param targetServer target server.
+     * @return
+     */
     @Override
     public DistroData getDatumSnapshot(String targetServer) {
         try {

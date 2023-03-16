@@ -328,10 +328,11 @@ public class HostReactor implements Closeable {
             serviceObj = new ServiceInfo(serviceName, clusters);
             
             serviceInfoMap.put(serviceObj.getKey(), serviceObj);
-            
+            //设置正在更新中
             updatingMap.put(serviceName, new Object());
             //更新服务列表
             updateServiceNow(serviceName, clusters);
+            //更新完成 移除标记位
             updatingMap.remove(serviceName);
             
         } else if (updatingMap.containsKey(serviceName)) {
@@ -378,7 +379,9 @@ public class HostReactor implements Closeable {
                 return;
             }
             //添加任务
-            ScheduledFuture<?> future = addTask(new UpdateTask(serviceName, clusters));
+            UpdateTask task = new UpdateTask(serviceName, clusters);
+            ScheduledFuture<?> future = addTask(task);
+
             futureMap.put(ServiceInfo.getKey(serviceName, clusters), future);
         }
     }
@@ -499,7 +502,7 @@ public class HostReactor implements Closeable {
                     incFailCount();
                     return;
                 }
-                //获取延迟时间
+                //获取延迟时间 获取服务端的缓存时间 默认10S
                 delayTime = serviceObj.getCacheMillis();
                 resetFailCount();
             } catch (Throwable e) {
@@ -507,6 +510,7 @@ public class HostReactor implements Closeable {
                 NAMING_LOGGER.warn("[NA] failed to update serviceName: " + serviceName, e);
             } finally {
                 if (!stop) {
+                    //再次定时任务延迟执行
                     executor.schedule(this, Math.min(delayTime << failCount, DEFAULT_DELAY * 60), TimeUnit.MILLISECONDS);
                 }
             }

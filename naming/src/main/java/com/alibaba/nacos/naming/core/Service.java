@@ -315,6 +315,7 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
         HealthCheckReactor.scheduleCheck(clientBeatCheckTask);
 
         for (Map.Entry<String, Cluster> entry : clusterMap.entrySet()) {
+            //设置cluser的Service属性
             entry.getValue().setService(this);
             entry.getValue().init();
         }
@@ -334,7 +335,7 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
     
     /**
      * Judge whether service has instance.
-     *
+     * 判断服务下是否有实例 只有要一个集群下存在实例 Service就不为空
      * @return true if no instance, otherwise false
      */
     public boolean isEmpty() {

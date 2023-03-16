@@ -44,6 +44,7 @@ import com.alibaba.nacos.naming.web.NamingResourceParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.Date;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -150,7 +151,7 @@ public class InstanceController {
     
     /**
      * Deregister instances.
-     *
+     * 移除服务实例
      * @param request http request
      * @return 'ok' if success
      * @throws Exception any error during deregister
@@ -169,7 +170,7 @@ public class InstanceController {
             Loggers.SRV_LOG.warn("remove instance from non-exist service: {}", serviceName);
             return "ok";
         }
-        
+        //移除实例
         serviceManager.removeInstance(namespaceId, serviceName, instance.isEphemeral(), instance);
         return "ok";
     }
@@ -385,6 +386,8 @@ public class InstanceController {
     @GetMapping("/list")
     @Secured(parser = NamingResourceParser.class, action = ActionTypes.READ)
     public ObjectNode list(HttpServletRequest request) throws Exception {
+        Date date=new Date();
+        System.out.println("date = " + date);
         //从request请求中提取相关参数
         String namespaceId = WebUtils.optional(request, CommonParams.NAMESPACE_ID, Constants.DEFAULT_NAMESPACE_ID);
         String serviceName = WebUtils.required(request, CommonParams.SERVICE_NAME);
@@ -474,7 +477,7 @@ public class InstanceController {
         result.put(SwitchEntry.CLIENT_BEAT_INTERVAL, switchDomain.getClientBeatInterval());
         //获取心跳信息
         String beat = WebUtils.optional(request, "beat", StringUtils.EMPTY);
-        System.out.println("beat = " + beat);
+//        System.out.println("beat = " + beat);
         RsInfo clientBeat = null;
         if (StringUtils.isNotBlank(beat)) {
             clientBeat = JacksonUtils.toObj(beat, RsInfo.class);
@@ -567,6 +570,7 @@ public class InstanceController {
             serviceName = key;
         }
         NamingUtils.checkServiceNameFormat(serviceName);
+        //获取服务
         Service service = serviceManager.getService(namespaceId, serviceName);
         
         if (service == null) {
@@ -581,7 +585,7 @@ public class InstanceController {
         for (Instance ip : ips) {
             ipArray.add(ip.toIpAddr() + "_" + ip.isHealthy());
         }
-        
+        //填充服务下所有实例的健康状态
         result.replace("ips", ipArray);
         return result;
     }
@@ -682,7 +686,7 @@ public class InstanceController {
         ObjectNode result = JacksonUtils.createEmptyJsonNode();
         //获取服务
         Service service = serviceManager.getService(namespaceId, serviceName);
-
+        //默认缓存时间 默认3S
         long cacheMillis = switchDomain.getDefaultCacheMillis();
         
         // now try to enable the push
@@ -692,6 +696,7 @@ public class InstanceController {
                 pushService
                         .addClient(namespaceId, serviceName, clusters, agent, new InetSocketAddress(clientIP, udpPort),
                                 pushDataSource, tid, app);
+                //默认值10S
                 cacheMillis = switchDomain.getPushCacheMillis(serviceName);
             }
         } catch (Exception e) {

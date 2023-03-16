@@ -124,7 +124,7 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
     @Override
     public void put(String key, Record value) throws NacosException {
         onPut(key, value);//本机内存中保存一份数据
-        //数据同步
+        //数据同步 延迟1S
         distroProtocol.sync(new DistroKey(key, KeyBuilder.INSTANCE_LIST_KEY_PREFIX), DataOperation.CHANGE,
                 globalConfig.getTaskDispatchPeriod() / 2);
     }
@@ -161,6 +161,7 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
             datum.value = (Instances) value;
             datum.key = key;
             datum.timestamp.incrementAndGet();
+            //保存key的与实例数据的对应关系
             dataStore.put(key, datum);
         }
 
@@ -357,6 +358,7 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
      */
     @Override
     public void listen(String key, RecordListener listener) throws NacosException {
+        //根据key获取服务
         ConcurrentLinkedQueue<RecordListener> recordListeners = listeners.get(key);
         if (recordListeners == null) {
             recordListeners = new ConcurrentLinkedQueue<>();
@@ -365,7 +367,7 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
                 recordListeners = recordListenersExist;
             }
         }
-    
+        //DCL检查 不存在 添加
         if (!recordListeners.contains(listener)) {
             synchronized (recordListeners) {
                 if (!recordListeners.contains(listener)) {
@@ -448,7 +450,7 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
         public int getTaskSize() {
             return tasks.size();
         }
-        //执行人
+        //执行执行任务
         @Override
         public void run() {
             Loggers.DISTRO.info("distro notifier started");
@@ -488,7 +490,7 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
                 for (RecordListener listener : recordListeners) {
                     
                     count++;
-                    
+                    System.out.println("action = " + action);
                     try {
                         if (action == DataOperation.CHANGE) {
                             Datum datum = dataStore.get(datumKey);
